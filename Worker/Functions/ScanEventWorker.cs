@@ -3,20 +3,23 @@ using Newtonsoft.Json;
 using Serilog;
 using Worker.Models;
 using Worker.Services.Database;
+using Worker.Services.EventResource;
 using Worker.Settings;
 
 namespace Worker.Functions;
 
 /* ParcelEventWorker -  responsible for managing parcel scan events */
-public class ParcelEventWorker
+public class ScanEventWorker
 {
     private readonly IDatabaseService _databaseService;
+    private readonly IEventResource _eventResource;
     private readonly ScanEventSettings _scanEventSettings;
     private readonly HttpClient _httpClient;
 
-    public ParcelEventWorker(IDatabaseService databaseService, ScanEventSettings scanEventSettings, HttpClient httpClient)
+    public ScanEventWorker(IDatabaseService databaseService, IEventResource eventResource, ScanEventSettings scanEventSettings, HttpClient httpClient)
     {
         _databaseService = databaseService;
+        _eventResource = eventResource;
         _scanEventSettings = scanEventSettings;
         _httpClient = httpClient;
     }
@@ -32,7 +35,7 @@ public class ParcelEventWorker
             try
             {
                 // Generate dynamic URI
-                var uri = await _scanEventSettings.GenerateUriAsync(_databaseService);
+                var uri = await _eventResource.GenerateUriAsync();
                 Log.Debug($"{this.GetType().Name}.{nameof(ExecuteAsync)} Scan event API request URI: {uri}");
 
                 // Fetch the events from external source

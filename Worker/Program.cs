@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Worker.Functions;
 using Worker.Services.Database;
+using Worker.Services.EventResource;
 using Worker.Settings;
 
 namespace Worker
@@ -19,10 +20,11 @@ namespace Worker
             /* Environment settings */
             services.AddSingleton(config.GetSection("DatabaseConnectionSettings").Get<DatabaseConnectionSettings>());
             services.AddSingleton(config.GetSection("ScanEventSettings").Get<ScanEventSettings>());
-            services.AddSingleton<ParcelEventWorker>();
+            services.AddSingleton<ScanEventWorker>();
 
             /*  Dependency Injections */
             services.AddScoped<IDatabaseService, DatabaseService>();
+            services.AddScoped<IEventResource, EventResource>();
 
             /* HTTP Client setup */
             services.AddHttpClient();
@@ -33,7 +35,7 @@ namespace Worker
             var serviceProvider = services.BuildServiceProvider();
 
             /* Execute parcel scan events  */
-            await serviceProvider.GetRequiredService<ParcelEventWorker>().ExecuteAsync(CancellationToken.None);
+            await serviceProvider.GetRequiredService<ScanEventWorker>().ExecuteAsync(CancellationToken.None);
         }
 
         /* App environmet settings */
