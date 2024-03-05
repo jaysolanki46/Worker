@@ -60,8 +60,6 @@ public class DatabaseService : IDatabaseService
             }
 
             await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-
-            Log.Information($"{this.GetType().Name}.{nameof(SaveEvent)} Successfully saved parcel event. ParcelId: {scanEvent.ParcelId}, EventId: {scanEvent.EventId}, Type: {scanEvent.Type}");
         }
         catch (Exception ex)
         {
