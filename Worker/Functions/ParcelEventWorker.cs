@@ -23,7 +23,7 @@ public class ParcelEventWorker
 
     public async Task ExecuteAsync(CancellationToken token)
     {
-        Log.Information($"Begin Operation {this.GetType().Name}.{nameof(ExecuteAsync)} \n");
+        Log.Information($"{this.GetType().Name}.{nameof(ExecuteAsync)} Begin operation");
 
         long lastEventId = 0;
         long lastParcelId = 0;
@@ -33,11 +33,11 @@ public class ParcelEventWorker
             {
                 // Generate dynamic URI
                 var uri = await _scanEventSettings.GenerateUriAsync(_databaseService);
-                Log.Debug($"Parcel scan event API request URI: {uri}");
+                Log.Debug($"{this.GetType().Name}.{nameof(ExecuteAsync)} Scan event API request URI: {uri}");
 
                 // Fetch the events from external source
                 var response = await _httpClient.GetStringAsync(uri);
-                Log.Debug($"Parcel scan event API response events: {response}");
+                Log.Debug($" {this.GetType().Name}.{nameof(ExecuteAsync)}Scan event API response events: {response}");
 
                 // Deserialize response object and map to response class
                 var scanEventResponse = JsonConvert.DeserializeObject<ScanEventResponse>(response);
@@ -49,13 +49,20 @@ public class ParcelEventWorker
 
                     foreach (var scanEvent in scanEventResponse.ScanEvents)
                     {
-                        // Save or update most recent scan event against a parcel
-                        await _databaseService.SaveEvent(scanEvent);
+                        // Save or update most recent scan event against a parcel, and if any event failed to save but continue processing others
+                        try
+                        {
+                            await _databaseService.SaveEvent(scanEvent);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error($"{this.GetType().Name}.{nameof(ExecuteAsync)} Failed to save scan event. EventId: {scanEvent.EventId}, ParcelId: {scanEvent.ParcelId}: {ex.Message}");
+                        }
                     }
                 }
                 else
                 {
-                    Log.Warning("Parcel scan event API response does not contain events.");
+                    Log.Warning("{this.GetType().Name}.{nameof(ExecuteAsync)} Scan event API response is empty.");
 
                     // 10-second delay to handle empty response and avoid immediate retries.
                     await Task.Delay(TimeSpan.FromSeconds(10), token); 
@@ -63,19 +70,18 @@ public class ParcelEventWorker
             }
             catch (HttpRequestException ex)
             {
-                Log.Error($"Failed to get events while http request: {ex.Message}");
+                Log.Error($"{this.GetType().Name}.{nameof(ExecuteAsync)} Failed to get scan events while http request: {ex.Message}");
 
                 // 10-second delay to handle exceptional cases and avoid immediate retries.
                 await Task.Delay(TimeSpan.FromSeconds(10), token);
             }
             catch (JsonException ex)
             {
-                Log.Error($"Failed to deserialize response: {ex.Message}");
+                Log.Error($"{this.GetType().Name}.{nameof(ExecuteAsync)} Failed to deserialize scan events response: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Log.Error($"An unexpected error occurred: {ex.Message}");
-                Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+                Log.Error($"{this.GetType().Name}.{nameof(ExecuteAsync)} An unexpected error occurredin : {ex.Message}");
             }
             finally
             {
@@ -88,7 +94,7 @@ public class ParcelEventWorker
                     {
                         // Save last event of the API response
                         await _databaseService.SaveLastEvent(new LastProcessedScanEvent() { LastEventId = lastEventId, ParcelId = lastParcelId });
-                        Log.Information($"Successfully saved last event: {lastEventId} for parcel scan event");
+                        Log.Information($"{this.GetType().Name}.{nameof(ExecuteAsync)} Successfully saved last event: {lastEventId} for parcel scan event");
                     }
                 }
             }

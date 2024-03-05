@@ -22,11 +22,11 @@ public class DatabaseService : IDatabaseService
             _database = client.GetDatabase(databaseSettings.Database);
 
             Log.Information($"Successfully connected to database");
-            Log.Debug($"Successfully connected to database: {databaseSettings.ConnectionString}, Database: {databaseSettings.Database}");
+            Log.Debug($"{this.GetType().Name}.{nameof(DatabaseService)} Successfully connected to database: {databaseSettings.ConnectionString}, Database: {databaseSettings.Database}");
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Failed to connect to database: {ex.Message}");
+            Log.Error(ex, $"{this.GetType().Name}.{nameof(DatabaseService)} Failed to connect to database: {ex.Message}");
             throw;
         }
     }
@@ -46,7 +46,7 @@ public class DatabaseService : IDatabaseService
                 .Set(x => x.StatusCode, scanEvent.StatusCode)
                 .Set(x => x.User.RunId, scanEvent.User.RunId);
 
-            switch (scanEvent.Type.ToUpper())
+            switch (scanEvent.Type?.ToUpper())
             {
                 case "PICKUP":
                     update = update.Set(x => x.PickedUpDateTimeUtc, scanEvent.CreatedDateTimeUtc);
@@ -55,17 +55,17 @@ public class DatabaseService : IDatabaseService
                     update = update.Set(x => x.DeliveredDateTimeUtc, scanEvent.CreatedDateTimeUtc);
                     break;
                 default:
-                    Log.Warning($"Unsupported parcel event type: {scanEvent.Type}. Skipping.");
-                    return;
+                    Log.Warning($"{this.GetType().Name}.{nameof(SaveEvent)} Unsupported parcel event type: {scanEvent.Type}.");
+                    break;
             }
 
             await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
 
-            Log.Information($"Successfully saved parcel event. ParcelId: {scanEvent.ParcelId}, EventId: {scanEvent.EventId}, Type: {scanEvent.Type}");
+            Log.Information($"{this.GetType().Name}.{nameof(SaveEvent)} Successfully saved parcel event. ParcelId: {scanEvent.ParcelId}, EventId: {scanEvent.EventId}, Type: {scanEvent.Type}");
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Failed save parcel event. ParcelId: {scanEvent.ParcelId}, EventId: {scanEvent.EventId}, Type: {scanEvent.Type}");
+            Log.Error(ex, $"{this.GetType().Name}.{nameof(SaveEvent)} Failed save parcel event. ParcelId: {scanEvent.ParcelId}, EventId: {scanEvent.EventId}, Type: {scanEvent.Type}");
             throw;
         }
     }
@@ -79,11 +79,11 @@ public class DatabaseService : IDatabaseService
             await collection.DeleteManyAsync(FilterDefinition<LastProcessedScanEvent>.Empty);
             await collection.InsertOneAsync(lastEvent);
 
-            Log.Information($"Successfully saved last processed parcel event. ParcelId: {lastEvent.ParcelId}, LastEventId: {lastEvent.LastEventId}");
+            Log.Information($"{this.GetType().Name}.{nameof(SaveLastEvent)} Successfully saved last processed parcel event. ParcelId: {lastEvent.ParcelId}, LastEventId: {lastEvent.LastEventId}");
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Failed to save last processed parcel event. ParcelId: {lastEvent.ParcelId}, LastEventId: {lastEvent.LastEventId}");
+            Log.Error(ex, $"{this.GetType().Name}.{nameof(SaveLastEvent)} Failed to save last processed parcel event. ParcelId: {lastEvent.ParcelId}, LastEventId: {lastEvent.LastEventId}");
             throw;
         }
     }
@@ -111,7 +111,7 @@ public class DatabaseService : IDatabaseService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Failed to get last processed parcel event.");
+            Log.Error(ex, $"{this.GetType().Name}.{nameof(GetLastEventId)} Failed to get last processed parcel event.");
             throw;
         }
     }

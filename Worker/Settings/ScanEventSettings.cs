@@ -25,7 +25,7 @@ public class ScanEventSettings
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Failed to generate scan event URI");
+            Log.Error(ex, $"{this.GetType().Name}.{nameof(GenerateUriAsync)} Failed to generate scan event URI");
             throw;
         }
     }
