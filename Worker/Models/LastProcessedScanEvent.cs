@@ -1,8 +1,9 @@
 ﻿using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
-
 namespace Worker.Models;
 
+/*
+    LastProcessedScanEvent model - handle last event information involved in parcel event response 
+*/
 public class LastProcessedScanEvent
 {
     public ObjectId _id { get; set; }

@@ -1,10 +1,13 @@
-﻿using Newtonsoft.Json;
+﻿using MongoDB.Libmongocrypt;
+using Newtonsoft.Json;
+using Serilog;
 using Worker.Models;
 using Worker.Services.Database;
 using Worker.Settings;
 
 namespace Worker.Functions;
 
+/* ParcelEventWorker -  responsible for managing parcel scan events */
 public class ParcelEventWorker
 {
     private readonly IDatabaseService _databaseService;
@@ -20,27 +23,7 @@ public class ParcelEventWorker
 
     public async Task ExecuteAsync(CancellationToken token)
     {
-        string jsonString = @"
-        {
-            ""ScanEvents"": [
-                {
-                    ""EventId"": 83269,
-                    ""ParcelId"": 5002,
-                    ""Type"": ""PICKUP"",
-                    ""CreatedDateTimeUtc"": ""2021-05-11T21:11:34.1506147Z"",
-                    ""StatusCode"": """",
-                    ""Device"": {
-                        ""DeviceTransactionId"": 83269,
-                        ""DeviceId"": 103
-                    },
-                    ""User"": {
-                        ""UserId"": ""NC1001"",
-                        ""CarrierId"": ""NC"",
-                        ""RunId"": ""100""
-                    }
-                }
-            ]
-        }";
+        Log.Information($"Begin Operation {this.GetType().Name}.{nameof(ExecuteAsync)} \n");
 
         long lastEventId = 0;
         long lastParcelId = 0;
@@ -48,9 +31,16 @@ public class ParcelEventWorker
         {
             try
             {
+                // Generate dynamic URI
                 var uri = await _scanEventSettings.GenerateUriAsync(_databaseService);
+                Log.Debug($"Parcel scan event API request URI: {uri}");
+
+                // Fetch the events from external source
                 var response = await _httpClient.GetStringAsync(uri);
-                var scanEventResponse = JsonConvert.DeserializeObject<ScanEventResponse>(jsonString);
+                Log.Debug($"Parcel scan event API response events: {response}");
+
+                // Deserialize response object and map to response class
+                var scanEventResponse = JsonConvert.DeserializeObject<ScanEventResponse>(response);
 
                 if (scanEventResponse != null && scanEventResponse.ScanEvents.Any())
                 {
@@ -59,31 +49,48 @@ public class ParcelEventWorker
 
                     foreach (var scanEvent in scanEventResponse.ScanEvents)
                     {
+                        // Save or update most recent scan event against a parcel
                         await _databaseService.SaveEvent(scanEvent);
                     }
-
                 }
                 else
                 {
-                    Console.WriteLine("API response does not contain scan events.");
+                    Log.Warning("Parcel scan event API response does not contain events.");
+
+                    // 10-second delay to handle empty response and avoid immediate retries.
+                    await Task.Delay(TimeSpan.FromSeconds(10), token); 
                 }
             }
             catch (HttpRequestException ex)
             {
-                Console.WriteLine($"Error making API request: {ex.Message}");
+                Log.Error($"Failed to get events while http request: {ex.Message}");
+
+                // 10-second delay to handle exceptional cases and avoid immediate retries.
                 await Task.Delay(TimeSpan.FromSeconds(10), token);
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"Error deserializing API response: {ex.Message}");
+                Log.Error($"Failed to deserialize response: {ex.Message}");
             }
             catch (Exception ex)
             {
+                Log.Error($"An unexpected error occurred: {ex.Message}");
                 Console.WriteLine($"An unexpected error occurred: {ex.Message}");
             }
             finally
             {
-                if (lastEventId >= 1) await _databaseService.SaveLastEvent(new LastProcessedScanEvent() { LastEventId = lastEventId, ParcelId = lastParcelId });
+                // Validate last event Id and diffrent from last processed event Id
+                if (lastEventId >= 1)
+                {
+                    var lastProcessedEventId = await _databaseService.GetLastEventId();
+
+                    if (lastProcessedEventId != lastEventId)
+                    {
+                        // Save last event of the API response
+                        await _databaseService.SaveLastEvent(new LastProcessedScanEvent() { LastEventId = lastEventId, ParcelId = lastParcelId });
+                        Log.Information($"Successfully saved last event: {lastEventId} for parcel scan event");
+                    }
+                }
             }
         }
     }

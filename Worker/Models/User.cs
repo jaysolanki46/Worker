@@ -1,5 +1,8 @@
 ﻿namespace Worker.Models;
 
+/*
+    User model - handle user information involved in parcel event response 
+*/
 public class User
 {
     public string UserId { get; set; }
