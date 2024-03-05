@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Worker": {
+      "commandName": "Project",
+      "workingDirectory": "C:\\git\\Worker\\Worker", // Replace path to your local directory in development/local environment
+      "environmentVariables": {
+        "ENVIRONMENT": "development"
+      }
+    }
+  }
+}
