@@ -175,11 +175,11 @@ Assumed the following JSON response would be received from Scan Event API (eg. G
 
 **MongoDB colletion samples**:
 
-| ![ParcelEvents](image.png) | ![ParcelLastEvent](image-1.png) |
+| ![ParcelEvents](/ReadMeImages/ParcelEvents.png) | ![ParcelLastEvent](/ReadMeImages/ParcelLastEvent.png) |
 
 **Logs sample**:
 
-![Worker logs](image-2.png)
+![Worker logs](/ReadMeImages/Logs.png)
 
 ## Improvements
 
